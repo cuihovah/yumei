@@ -12,9 +12,10 @@ $(document).ready(function(){
             var data = res.data
             for(var ix in data){
                 if(data[ix].type != 'file'){
-                    $('<div><img src="assets/dir.png" style="vertical-align: middle;" height="20px"><a href="javascript:void(0)">'+data[ix].name+'</a></div>').appendTo($('body'))
+                    // $('<div><img src="assets/dir.png" class="img-icon"><span class="file-name"><a href="javascript:void(0)">'+data[ix].name+'</a></span></div>').appendTo($('body'))
+                    $('<div><em class="glyphicon glyphicon-folder-open"></em><span class="file-name"><a href="javascript:void(0)">'+data[ix].name+'</a></span></div>').appendTo($('body'))
                 }else{
-                    $('<div><img src="assets/file.png" style="vertical-align: middle;" height="20px">'+[data[ix].name, data[ix].size, '<a href="#">下载</a>'].join('&nbsp;&nbsp;&nbsp;&nbsp;')+'</div>').appendTo($('body'))
+                    $('<div><em class="glyphicon glyphicon-file"></em><span class="file-name">'+data[ix].name+'</span><span class="file-size">'+data[ix].size+'</span><a class="btn-download" href="#">下载</a></div>').appendTo($('body'))
                 }
             }
             $('a').click(function(){

@@ -11,7 +11,7 @@ import (
 	"github.com/ghodss/yaml"
 	"os"
 	"./engine"
-	// "net/url"
+	"strconv"
 )
 
 type Config struct {
@@ -20,7 +20,7 @@ type Config struct {
 
 type LsFile struct {
 	Name string `json:"name"`
-	Size int64 `json:"size"`
+	Size string `json:"size"`
 	Type string `json:"type"`
 }
 
@@ -42,13 +42,9 @@ func GetListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// configStr := string(data[:count])
+
 	config := Config{}
 	_ = yaml.Unmarshal(data[:count], &config)
-	// fmt.Println(config.Root)
-	// fmt.Println(configStr)
-
-	// -----------------------------------
 
 
 	urlObj := r.URL
@@ -69,9 +65,24 @@ func GetListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 		if v.IsDir() == true {
 			Type = "directory"
 		}
+		unit := "B"
+		size := int(v.Size())
+		if size > 1024 {
+			unit = "K"
+			size = size >> 10
+		}
+		if size > 1024 {
+			unit = "M"
+			size = size >> 10
+		}
+		if size > 1024 {
+			unit = "G"
+			size = size >> 10
+		}
+		human := strconv.Itoa(size)+unit
 		listfile = append(listfile, LsFile{
 			Name: v.Name(),
-			Size: v.Size(),
+			Size: human,
 			Type: Type,
 		})
 	}
@@ -87,7 +98,6 @@ func GetListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 
 func HtmlHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Println(engine.HtmlIndex())
 	w.Write([]byte(engine.HtmlIndex()))
 }
 
