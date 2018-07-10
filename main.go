@@ -12,6 +12,7 @@ import (
 	"os"
 	"./engine"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -53,7 +54,12 @@ func GetListHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params)
 	pathStr := config.Root
 	listfile := make([]LsFile, 0)
 	if len(pth) != 0 {
-		pathStr = pth[0]
+		if n := strings.Index(pth[0], ".."); n >= 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte("{code: 2, msg: \"非法访问\"}"))
+			return
+		}
+		pathStr = pathStr + pth[0]
 	}
 	files, err := ioutil.ReadDir(pathStr)
 	if err != nil {
@@ -121,10 +127,50 @@ func AssetsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	w.Write([]byte(engine.Assets(ps.ByName("filename"))))
 }
 
+func DownloadHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	file, err := os.Open("./config.yaml")
+	if err != nil {
+		log.Fatal(err.Error())
+		return
+	}
+	data := make([]byte, 1000)
+	count, err := file.Read(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config := Config{}
+	_ = yaml.Unmarshal(data[:count], &config)
+
+
+	urlObj := r.URL
+	query := urlObj.Query()
+	pth := query["path"]
+	filename := query["name"][0]
+	pathStr := config.Root
+	if len(pth) != 0 {
+		if n := strings.Index(pth[0], ".."); n >= 0 {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte("{code: 2, msg: \"非法访问\"}"))
+			return
+		}
+		pathStr = pathStr + pth[0]
+	}
+	buf, _ := ioutil.ReadFile(pathStr)
+	kind, unknow := filetype.Match(buf)
+	if unknow != nil {
+		log.Fatal(unknow.Error())
+	}
+	w.Header().Set("Content-Type", kind.MIME.Value)
+	w.Header().Set("Content-Disposition", "attachment;filename="+filename+";")
+	w.Write(buf)
+}
+
 func main() {
 	router := httprouter.New()
 	router.GET("/", HtmlHandler)
 	router.GET("/files", GetListHandler)
+	router.GET("/files/download", DownloadHandler)
 	router.GET("/dist/scripts/:filename", ScriptHandler)
 	router.GET("/dist/styles/:filename", CssHandler)
 	router.GET("/assets/:filename", AssetsHandler)
